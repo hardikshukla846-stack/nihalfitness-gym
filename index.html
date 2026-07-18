@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nihal Fitness | Login</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Poppins',sans-serif;
+}
+
+body{
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:#0f0f0f;
+overflow:hidden;
+}
+
+body::before{
+content:'';
+position:absolute;
+width:450px;
+height:450px;
+background:#f8b400;
+border-radius:50%;
+filter:blur(180px);
+top:-150px;
+left:-100px;
+opacity:.25;
+}
+
+body::after{
+content:'';
+position:absolute;
+width:400px;
+height:400px;
+background:#ff9800;
+border-radius:50%;
+filter:blur(180px);
+bottom:-120px;
+right:-80px;
+opacity:.20;
+}
+
+.container{
+width:360px;
+background:rgba(255,255,255,.06);
+backdrop-filter:blur(18px);
+border:1px solid rgba(255,255,255,.08);
+border-radius:22px;
+padding:35px;
+box-shadow:0 15px 40px rgba(0,0,0,.45);
+animation:fade .8s ease;
+z-index:5;
+}
+
+@keyframes fade{
+from{
+opacity:0;
+transform:translateY(30px);
+}
+to{
+opacity:1;
+transform:translateY(0);
+}
+}
+
+.logo{
+width:80px;
+height:80px;
+margin:auto;
+background:linear-gradient(135deg,#ff9800,#ffc107);
+border-radius:50%;
+display:flex;
+justify-content:center;
+align-items:center;
+font-size:34px;
+font-weight:bold;
+color:#111;
+margin-bottom:20px;
+}
+
+h2{
+color:#fff;
+text-align:center;
+margin-bottom:8px;
+}
+
+.subtitle{
+color:#bdbdbd;
+text-align:center;
+font-size:14px;
+margin-bottom:30px;
+}
+
+.inputBox{
+position:relative;
+margin-bottom:18px;
+}
+
+.inputBox input{
+width:100%;
+padding:14px 16px;
+background:#1b1b1b;
+border:none;
+outline:none;
+border-radius:12px;
+color:#fff;
+font-size:15px;
+}
+
+.inputBox input:focus{
+border:2px solid #f8b400;
+}
+
+.toggle{
+position:absolute;
+right:15px;
+top:15px;
+cursor:pointer;
+color:#bbb;
+}
+
+.remember{
+display:flex;
+justify-content:space-between;
+align-items:center;
+font-size:13px;
+color:#ccc;
+margin-bottom:25px;
+}
+
+.remember a{
+color:#f8b400;
+text-decoration:none;
+}
+
+.loginBtn{
+width:100%;
+padding:15px;
+background:linear-gradient(135deg,#ff9800,#ffc107);
+border:none;
+border-radius:12px;
+font-size:16px;
+font-weight:600;
+cursor:pointer;
+transition:.3s;
+}
+
+.loginBtn:hover{
+transform:translateY(-2px);
+box-shadow:0 10px 20px rgba(255,193,7,.3);
+}
+
+.bottom{
+margin-top:25px;
+text-align:center;
+color:#bbb;
+font-size:14px;
+}
+
+.bottom a{
+color:#ffc107;
+text-decoration:none;
+font-weight:600;
+}
+
+.loading{
+display:none;
+text-align:center;
+margin-top:20px;
+color:#ffc107;
+font-size:14px;
+}
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="logo">
+🏋️
+</div>
+
+<h2>Welcome Back</h2>
+
+<p class="subtitle">
+Login to Nihal Fitness
+</p>
+
+<div class="inputBox">
+<input
+type="email"
+id="email"
+placeholder="Email Address">
+</div>
+
+<div class="inputBox">
+
+<input
+type="password"
+id="password"
+placeholder="Password">
+
+<span
+class="toggle"
+onclick="togglePassword()">
+👁
+</span>
+
+</div>
+
+<div class="remember">
+
+<label>
+<input type="checkbox">
+Remember Me
+</label>
+
+<a href="#">
+Forgot Password?
+</a>
+
+</div>
+
+<button
+class="loginBtn"
+onclick="login()">LOGIN</button>
+
+
+
+<div class="loading" id="loading">
+Signing in...
+</div>
+
+<div class="bottom">
+
+Don't have an account?
+
+<a href="register.html">
+
+Register
+
+</a>
+
+</div>
+
+</div>
+<!-- Firebase + JavaScript -->
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB3NWRwulNabXgSPS7vk5SVTUJUtUk9WzU",
+  authDomain: "nihal-fitness.firebaseapp.com",
+  projectId: "nihal-fitness",
+  storageBucket: "nihal-fitness.firebasestorage.app",
+  messagingSenderId: "679343097767",
+  appId: "1:679343097767:web:11da398a69c6d836c11882",
+  measurementId: "G-WSM58PVPZO"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// Show / Hide Password
+window.togglePassword = function () {
+  const password = document.getElementById("password");
+  password.type = password.type === "password" ? "text" : "password";
+};
+
+// Login Function
+window.login = async function () {
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const loading = document.getElementById("loading");
+
+  if (!email || !password) {
+    alert("Please enter email and password.");
+    return;
+  }
+
+  loading.style.display = "block";
+  loading.innerHTML = "Signing In...";
+
+  try {
+
+    await signInWithEmailAndPassword(auth, email, password);
+
+    loading.innerHTML = "Login Successful ✅";
+
+    setTimeout(() => {
+      window.location.href = "dashboard.html";
+    }, 1000);
+
+  } catch (error) {
+
+    loading.style.display = "none";
+    alert(error.message);
+
+  }
+
+};
+
+</script>
+
+</body>
+
+</html>
+<!-- Part 2 will continue from here -->
