@@ -29,12 +29,12 @@
             <div class="progress-bar" id="progressBar"></div>
         </div>
         <p style="margin-top:15px;">Remaining Due: <b>₹<span id="dueAmount">0</span></b></p>
+        <p style="margin-top:10px; font-size: 14px;">Next due on: <b id="nextDueDate">Loading...</b></p>
     </div>
 
     <div class="glass" style="text-align:center;">
         <h3>Pay via QR</h3>
         <div class="qr-box">
-            <!-- Replace this placeholder with your actual Payment QR image -->
             <img src="your-payment-qr.png" alt="Payment QR" width="180">
         </div>
         <p style="font-size: 13px; color: #94A3B8;">Scan to pay fees. Upload screenshot below.</p>
@@ -52,11 +52,27 @@
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
-        const firebaseConfig = { /* Your Config Here */ };
+        // IMPORTANT: Replace this config with your actual Firebase project settings
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
         const auth = getAuth(app);
+
+        // Helper: Calculate next month's due date
+        function getNextDueDate(submissionDate) {
+            const date = new Date(submissionDate);
+            date.setMonth(date.getMonth() + 1);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
 
         // Fetch and Display Data
         async function loadFeeData() {
@@ -67,10 +83,18 @@
                 const data = snap.data();
                 const total = data.totalFee || 0;
                 const paid = data.paidAmount || 0;
+                
                 document.getElementById("totalFee").innerText = total;
                 document.getElementById("paidAmount").innerText = paid;
                 document.getElementById("dueAmount").innerText = total - paid;
                 document.getElementById("progressBar").style.width = (total > 0 ? (paid / total) * 100 : 0) + "%";
+                
+                // Set Due Date
+                if (data.lastPaymentDate) {
+                    document.getElementById("nextDueDate").innerText = getNextDueDate(data.lastPaymentDate);
+                } else {
+                    document.getElementById("nextDueDate").innerText = "Not set";
+                }
             }
         }
 
@@ -78,9 +102,11 @@
         window.submitPayment = async () => {
             const file = document.getElementById('screenshot').files[0];
             if (!file) return alert("Please select a screenshot.");
+            
             const storageRef = ref(storage, 'payments/' + auth.currentUser.uid + '_' + Date.now());
             await uploadBytes(storageRef, file);
             const url = await getDownloadURL(storageRef);
+            
             await addDoc(collection(db, "payments"), {
                 uid: auth.currentUser.uid,
                 proofUrl: url,
@@ -90,7 +116,10 @@
             alert("Payment submitted for verification! ✅");
         };
 
-        loadFeeData();
+        // Initialize
+        auth.onAuthStateChanged(user => {
+            if (user) loadFeeData();
+        });
     </script>
 </body>
 </html>
