@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nihal Fitness | Fee Management</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
         body { background: #0B1220; color: white; padding: 20px; min-height: 100vh; }
@@ -13,8 +13,8 @@
         .progress-container { width: 100%; height: 12px; background: #1E293B; border-radius: 10px; overflow: hidden; }
         .progress-bar { height: 100%; background: linear-gradient(90deg, #22C55E, #34D399); width: 0%; transition: 1s ease; }
         .qr-box { background: white; width: 200px; height: 200px; margin: 20px auto; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
-        input[type="file"] { width: 100%; margin: 15px 0; color: #94A3B8; }
-        button { width: 100%; padding: 15px; background: linear-gradient(135deg,#2563EB,#38BDF8); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; }
+        input[type="file"], input[type="number"] { width: 100%; margin: 10px 0; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; }
+        button { width: 100%; padding: 15px; background: linear-gradient(135deg,#2563EB,#38BDF8); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -29,19 +29,19 @@
             <div class="progress-bar" id="progressBar"></div>
         </div>
         <p style="margin-top:15px;">Remaining Due: <b>₹<span id="dueAmount">0</span></b></p>
+        <p style="margin-top:10px; font-size: 14px;">Next due on: <b id="nextDueDate">Loading...</b></p>
     </div>
 
     <div class="glass" style="text-align:center;">
         <h3>Pay via QR</h3>
         <div class="qr-box">
-            <!-- Replace this placeholder with your actual Payment QR image -->
             <img src="your-payment-qr.png" alt="Payment QR" width="180">
         </div>
-        <p style="font-size: 13px; color: #94A3B8;">Scan to pay fees. Upload screenshot below.</p>
     </div>
 
     <div class="glass">
-        <h3>Upload Payment Proof</h3>
+        <h3>Submit Payment Proof</h3>
+        <input type="number" id="amountInput" placeholder="Enter Amount Paid (₹)">
         <input type="file" id="screenshot">
         <button onclick="submitPayment()">SUBMIT PAYMENT</button>
     </div>
@@ -52,30 +52,19 @@
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
-        const firebaseConfig = {
-
-apiKey: "AIzaSyB3NWRwulNabXgSPS7vk5SVTUJUtUk9WzU",
-
-authDomain: "nihal-fitness.firebaseapp.com",
-
-projectId: "nihal-fitness",
-
-storageBucket: "nihal-fitness.firebasestorage.app",
-
-messagingSenderId: "679343097767",
-
-appId: "1:679343097767:web:11da398a69c6d836c11882",
-
-measurementId: "G-WSM58PVPZO"
-
-};
-
+        const firebaseConfig = { /* YOUR CONFIG HERE */ };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
         const auth = getAuth(app);
 
-        // Fetch and Display Data
+        // Calculate next month's due date
+        function getNextDueDate(dateString) {
+            const date = new Date(dateString);
+            date.setMonth(date.getMonth() + 1);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
         async function loadFeeData() {
             const user = auth.currentUser;
             if (!user) return;
@@ -84,30 +73,41 @@ measurementId: "G-WSM58PVPZO"
                 const data = snap.data();
                 const total = data.totalFee || 0;
                 const paid = data.paidAmount || 0;
+                
                 document.getElementById("totalFee").innerText = total;
                 document.getElementById("paidAmount").innerText = paid;
                 document.getElementById("dueAmount").innerText = total - paid;
                 document.getElementById("progressBar").style.width = (total > 0 ? (paid / total) * 100 : 0) + "%";
+                
+                if (data.lastPaymentDate) {
+                    document.getElementById("nextDueDate").innerText = getNextDueDate(data.lastPaymentDate);
+                } else {
+                    document.getElementById("nextDueDate").innerText = "Not set";
+                }
             }
         }
 
-        // Upload Logic
         window.submitPayment = async () => {
             const file = document.getElementById('screenshot').files[0];
-            if (!file) return alert("Please select a screenshot.");
+            const amount = document.getElementById('amountInput').value;
+            
+            if (!file || !amount) return alert("Please enter the amount and select a screenshot.");
+            
             const storageRef = ref(storage, 'payments/' + auth.currentUser.uid + '_' + Date.now());
             await uploadBytes(storageRef, file);
             const url = await getDownloadURL(storageRef);
+            
             await addDoc(collection(db, "payments"), {
                 uid: auth.currentUser.uid,
+                amount: parseFloat(amount),
                 proofUrl: url,
                 status: "Pending",
                 timestamp: new Date().toISOString()
             });
-            alert("Payment submitted for verification! ✅");
+            alert("Payment submitted for verification! Your balance will update once approved. ✅");
         };
 
-        loadFeeData();
+        auth.onAuthStateChanged(user => { if (user) loadFeeData(); });
     </script>
 </body>
 </html>

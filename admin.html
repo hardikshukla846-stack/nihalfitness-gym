@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nihal Fitness | Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { background: #0f172a; color: white; padding: 20px; font-family: 'Poppins', sans-serif; }
+        .payment-card { background: #1e293b; padding: 20px; margin-bottom: 15px; border-radius: 12px; border: 1px solid #334155; }
+        button { background: #22C55E; border: none; padding: 12px 24px; color: white; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; }
+        button:hover { background: #16a34a; }
+        .view-link { color: #38BDF8; text-decoration: none; font-size: 16px; display: block; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Pending Payments</h1>
+    <div id="paymentList">Checking admin access...</div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+        const firebaseConfig = { /* PASTE YOUR CONFIG HERE */ };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Security: Check if logged-in user is an Admin
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = "index.html";
+                return;
+            }
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists() && userDoc.data().role === "admin") {
+                fetchPayments();
+            } else {
+                alert("Access Denied: You are not an admin.");
+                window.location.href = "dashboard.html";
+            }
+        });
+
+        async function fetchPayments() {
+            const list = document.getElementById("paymentList");
+            const querySnapshot = await getDocs(collection(db, "payments"));
+            list.innerHTML = "";
+            
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                if(data.status === "Pending") {
+                    list.innerHTML += `
+                        <div class="payment-card">
+                            <p><strong>User UID:</strong> ${data.uid}</p>
+                            <p><strong>Amount:</strong> ₹${data.amount || 0}</p>
+                            <a href="${data.proofUrl}" target="_blank" class="view-link">View Screenshot Proof</a>
+                            <button onclick="approve('${docSnap.id}', '${data.uid}', ${data.amount || 0})">Approve Payment</button>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        window.approve = async (paymentId, userId, amount) => {
+            try {
+                const userRef = doc(db, "users", userId);
+                const userSnap = await getDoc(userRef);
+                const currentPaid = userSnap.data().paidAmount || 0;
+                
+                // Update User's Paid Amount
+                await updateDoc(userRef, { paidAmount: currentPaid + amount });
+                
+                // Mark Payment as Approved
+                await updateDoc(doc(db, "payments", paymentId), { status: "Approved" });
+                
+                alert("Payment Approved! ✅");
+                fetchPayments(); 
+            } catch (error) {
+                console.error(error);
+                alert("Error approving payment.");
+            }
+        };
+    </script>
+</body>
+</html>
